@@ -1,10 +1,13 @@
 require('dotenv').config();
-require('azure-app-service-keepalive').keepalive();
-const azure = require('azure-storage');
-// Create the service used to connect to our storage table with the connection string
-const tableService = azure.createTableService(
-  process.env.STORAGE_CONNECTION_STRING
-);
+const AWS = require('aws-sdk');
+// Update our AWS Connection Details
+AWS.config.update({
+  region: process.env.AWS_DEFAULT_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+})
+// Create the service used to connect to DynamoDB
+const docClient = new AWS.DynamoDB.DocumentClient();
 
 module.exports = {
   // Define the prefix
@@ -47,21 +50,25 @@ module.exports = {
       .then((collected) => {
         application.pitch = collected.array()[0].content;
 
-        // Add the PartitionKey & RowKey, the only two required fields for saving the object
-        application.PartitionKey = new Date().toISOString();
-        application.RowKey = new Date().toISOString();
+        // Setup the parameters required to save to Dynamo
+        const params = {
+          TableName: 'demo-discord-bot',
+          Item: {
+            // Use Date.now().toString() just to generate a unique value
+            id: Date.now().toString(),
+            // `info` is used to save the actual data
+            info: application
+          }
+        }
 
-        // Insert the entity
-        tableService.insertEntity('applications', application, (error) => {
+        docClient.put(params, (error) => {
           if (!error) {
             // Finally, return a message to the user stating that the app was saved
-            return msg.member.send(
-              "We've successfully received your application. We'll be in touch 😊."
-            );
+            return msg.member.send("We've successfully received your application. We'll be in touch 😊.")
           } else {
-            throw 'Unable to save record, err' + error;
+            throw "Unable to save record, err" + error
           }
-        });
+        })
       });
   }
 };

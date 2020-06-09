@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-eb-service-keepalive": "^1.0.0",
     "aws-sdk": "^2.692.0",
     "axios": "^0.19.2",
     "discord.js": "^12.2.0",
